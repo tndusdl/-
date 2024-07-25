@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>책 리뷰 사이트</title>
+  <style>
+    body { /*전체*/
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* 글꼴 바꾸기... */
+      margin: 0; 
+      padding: 0; 
+      background-color: #f4f4f4; 
+      color: #333; 
+    }
+    header { /*헤더*/
+      background-color: #007bff; 
+      color: #fff;
+      padding: 20px; /*안쪽 여백 (15~20)*/
+      text-align: center; 
+    }
+    header h1 { /*헤더 다독다독*/
+      margin: 0; 
+      font-size: 20px; 
+    }
+    .search-container { /*검색*/
+      margin: 20px auto; 
+      max-width: 600px;
+      display: flex; 
+      justify-content: center;
+    }
+    .search-container input[type=text] { /*검색*/
+      padding: 10px; 
+      width: 80%; 
+      font-size: 16px; 
+      border: 1px solid #ddd; 
+      border-radius: 4px 0 0 4px;
+    }
+    .search-container button { /*검색버튼*/
+      padding: 10px 20px; 
+      font-size: 16px;
+      border: 1px solid #ddd; 
+      border-left: none; /* 왼쪽 테두리 제거 */
+      background-color: #0056b3; 
+      color: #fff; 
+      cursor: pointer; /* 커서를 손 모양으로 변경 */
+      border-radius: 0 4px 4px 0; 
+    }
+    .search-container button:hover { /*버튼에 마우스를 올렸을 때 배경 색상을 변경할 수 있게 함*/
+      background-color: #00408d; 
+    }
+    .container {
+      padding: 20px; 
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    section {
+      margin-bottom: 40px; /* 아래쪽 여백 설정 */
+    }
+    h2 { /*최근 리뷰 목록*/
+      border-bottom: 2px solid #007bff;
+      padding-bottom: 10px; 
+      font-size: 1.5em; 
+      color: #007bff; 
+    }
+    .review-form { /*리뷰 작성*/
+      background: #fff;
+      border: 1px solid #ddd; 
+      border-radius: 4px;
+      padding: 20px; 
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* 그림자 설정하기 */
+    }
+    .review-form label { /*작성 폼 스타일*/
+      font-weight: bold; 
+      margin-bottom: 5px; 
+      display: block; 
+    }
+    .review-form input[type=text], .review-form textarea { /*텍스트 입력 부분*/
+      width: calc(100% - 20px); 
+      padding: 10px; 
+      margin-bottom: 15px; 
+      border: 1px solid #ddd; 
+      border-radius: 4px; 
+    }
+    .review-form input[type=number] { /*별점*/
+      width: calc(50% - 20px); 
+    }
+    .review-form button { /*제출 버튼*/
+      background-color: #007bff; 
+      color: #fff; 
+      border: none; 
+      padding: 10px 20px; 
+      cursor: pointer; /* 커서를 손 모양으로 변경하기 */
+      border-radius: 4px; 
+    }
+    .review-form button:hover { /* 버튼 위에 마우스가 올라가면 배경 색상 변경하기 */
+      background-color: #0056b3; 
+    }
+    .review { /*리뷰*/
+      background: #fff; 
+      border: 1px solid #ddd; 
+      border-radius: 4px; 
+      padding: 15px; 
+      margin-bottom: 15px; 
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); 
+    }
+    .review h3 {
+      margin-top: 0; 
+    }
+    .book-details { /*책 세부 정보*/
+      background: #fff; 
+      border: 1px solid #ddd; 
+      border-radius: 4px; 
+      padding: 20px; 
+      margin-top: 20px; 
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); 
+    }
+    .book-details p { /*문단*/
+      margin: 10px 0; 
+    }
+    .books-list { /*책 목록*/
+      display: flex; 
+      flex-wrap: wrap; 
+      gap: 20px;
+      justify-content: center; 
+    }
+    .book-card { /* 책 카드*/
+      background: #fff;
+      border: 1px solid #ddd; 
+      border-radius: 4px; 
+      width: 200px; 
+      text-align: center; 
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); 
+      overflow: hidden; /* 전체 내용 다 보이게 ㄴㄴ */
+      margin-bottom: 20px; 
+    }
+    .book-card img { /*책 카드 표지*/
+      width: 100%; 
+      height: auto; 
+      cursor: pointer; /* 커서를 손 모양으로 변경 */
+    }
+    .book-card h3 { /*책 카드 표지 제목*/
+      margin: 10px 0; 
+      font-size: 1em; 
+    }
+    .book-card p { /*책 카드 문단*/
+      margin: 5px 0; 
+      font-size: 0.9em; 
+      color: #555; 
+    }
+    .modal-overlay { /*팝업 모달*/
+      position: fixed; /* 고정 위치 설정 */
+      top: 0; 
+      left: 0; 
+      width: 100%; 
+      height: 100%; 
+      background: rgba(0, 0, 0, 0.5); /* 반투명 배경색 설정 */
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      z-index: 1000; /* 가장 위에 표시 */
+    }
+    .modal-content {
+      background: #fff; 
+      border-radius: 4px; 
+      padding: 20px; 
+      max-width: 600px; 
+      width: 100%; 
+      position: relative; /* 상대 위치 설정 */
+    }
+    .modal-content button { /*팝업 모달 닫기 버튼*/
+      position: absolute; /* 절대 위치 설정 */
+      top: 10px; 
+      right: 10px; 
+      background: #ff0000;
+      color: #fff; 
+      border: none; 
+      padding: 10px; 
+      cursor: pointer; /* 커서 포인터로 변경 */
+    }
+    .modal-content button:hover { /*모달 닫기 버튼에 마우스를 올렸을 때*/
+      background: #cc0000; /* 강조하기 빨간색 ㅇㅇ*/
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>다독다독</h1> <!-- 다독다독 웹페이지 -->
+    <div class="search-container">
+      <input type="text" id="search-input" placeholder="무슨 책을 읽으셨나요?"> 
+      <button onclick="searchBooks()">검색</button> 
+    </div>
+  </header>
+
+  <div class="container">
+    <section id="reviews-section">
+      <h2>최근 리뷰 목록</h2>
+      <div id="reviews-list">
+      </div>
+    </section>
+
+    <section id="review-form-section">
+      <h2>리뷰 작성</h2>
+      <div class="review-form">
+        <label for="book-title">책 제목:</label>
+        <input type="text" id="book-title" required> 
+        
+        <label for="rating">평점 (1-5):</label>
+        <input type="number" id="rating" min="1" max="5" required> <!-- 평점 입력하기 -->
+        
+        <label for="review-content">리뷰 내용:</label>
+        <textarea id="review-content" rows="4" required></textarea> <!-- 리뷰 내용 입력하기 -->
+        
+        <button onclick="submitReview()">리뷰 작성하기</button> <!-- 리뷰 작성 버튼 누르기 -->
+      </div>
+    </section>
+
+    <div id="book-details-modal" class="book-details" style="display: none;">
+      <button onclick="closeModal()" class="modal-close">×</button> <!-- 모달 팝업 닫기 버튼임 -->
+      <h2 id="book-title-detail">책 제목</h2>
+      <p><strong>저자:</strong> <span id="book-author">저자 정보</span></p>
+      <p><strong>출판사:</strong> <span id="book-publisher">출판사 정보</span></p>
+      <p><strong>출판일:</strong> <span id="book-published-date">출판일 정보</span></p>
+      <p><strong>설명:</strong> <span id="book-description">설명</span></p>
+      <button onclick="openReviewForm()">리뷰 작성하기</button> <!-- 리뷰 작성하기 버튼임 -->
+    </div>
+
+    <div id="books-list" class="books-list">
+    
+    </div>
+  </div>
+
+  <script>
+    // 리뷰 목록을 저장할 빈 배열을 만들기
+    let reviews = [];
+
+    // 페이지가 로드되면 리뷰를 화면에 표시가 됨
+    window.onload = function() {
+      displayReviews();
+    };
+
+    // 책을 검색하기
+    function searchBooks() {
+      // 검색창에 입력된 값 가져오기
+      const searchQuery = document.getElementById('search-input').value.trim();
+      
+      // 검색어 비우면 알림을 표시하기.
+      if (!searchQuery) {
+        alert('검색어를 입력하세요.');
+        return;
+      }
+
+      // Google Books API에서 책 정보를 가져오기.
+      const apiUrl = `https://www.googleapis.com/books/v1/volumes?q=${searchQuery}`;
+
+      fetch(apiUrl)
+        .then(response => response.json()) // 응답 JSON 형식으로 변환하기 
+        .then(data => {
+          console.log(data); // 콘솔에 데이터 출력하면
+          displayBooks(data); // 검색했던 책이 화면에 표시 됨 
+        })
+        .catch(error => {
+          console.error('Error fetching data:', error); // 오류가 발생하면 콘솔에 오류를 표시함.
+        });
+    }
+
+    // 검색 했을 때 책 카드가 나옴 (리스트), 화면에 표시하기
+    function displayBooks(data) {
+      const booksList = document.getElementById('books-list');
+      booksList.innerHTML = ''; // 기존 내용을 지움.
+
+      // 책 목록을 반복하면서 각각의 책을 카드로 만들기 (책 칸)
+      data.items.forEach(item => {
+        const book = item.volumeInfo;
+        const bookCard = document.createElement('div');
+        bookCard.classList.add('book-card');
+        bookCard.innerHTML = `
+          <img src="${book.imageLinks ? book.imageLinks.thumbnail : 'https://via.placeholder.com/200x300?text=No+Image'}" alt="${book.title}" onclick="showBookDetails('${item.id}')">
+          <h3 onclick="showBookDetails('${item.id}')">${book.title}</h3>
+          <p><strong>저자:</strong> ${book.authors ? book.authors.join(', ') : '저자 정보 없음'}</p>
+          <p><strong>출판사:</strong> ${book.publisher ? book.publisher : '출판사 정보 없음'}</p>
+          <p><strong>출판일:</strong> ${book.publishedDate ? book.publishedDate : '출판일 정보 없음'}</p>
+        `;
+        booksList.appendChild(bookCard); // 책 카드를 책 목록에 추가합니다.
+      });
+    }
+
+    // 책의 상세 정보를 모달 창으로 표시하기
+    function showBookDetails(bookId) {
+      const apiUrl = `https://www.googleapis.com/books/v1/volumes/${bookId}`;
+
+      fetch(apiUrl)
+        .then(response => response.json()) // 응답을 JSON 형식으로 변환함.
+        .then(data => {
+          console.log(data); // 콘솔에 데이터 출력하기
+          const book = data.volumeInfo;
+          document.getElementById('book-title-detail').textContent = book.title;
+          document.getElementById('book-author').textContent = book.authors ? book.authors.join(', ') : '저자 정보 없음';
+          document.getElementById('book-publisher').textContent = book.publisher ? book.publisher : '출판사 정보 없음';
+          document.getElementById('book-published-date').textContent = book.publishedDate ? book.publishedDate : '출판일 정보 없음';
+          document.getElementById('book-description').textContent = book.description ? book.description : '설명 없음';
+
+          document.getElementById('book-details-modal').style.display = 'block'; // 모달 팝업 열기
+        })
+        .catch(error => {
+          console.error('Error fetching data:', error); // 오류가 발생하면 콘솔에 오류를 표시함.
+        });
+    }
+
+    // 리뷰 목록을 화면에 표시하게 하기 
+    function displayReviews() {
+      const reviewsList = document.getElementById('reviews-list');
+      reviewsList.innerHTML = ''; // 기존 내용을 지움.
+
+      // 저장된 리뷰들을 반복하면서 화면에 표시함 (바로 보이게 표시)
+      reviews.forEach(review => {
+        const reviewDiv = document.createElement('div');
+        reviewDiv.classList.add('review');
+        reviewDiv.innerHTML = `
+          <h3>${review.title}</h3>
+          <p><strong>평점:</strong> ${review.rating}</p>
+          <p>${review.content}</p>
+        `;
+        reviewsList.appendChild(reviewDiv); // 리뷰를 리뷰 목록에 추가하기 
+      });
+    }
+
+    // 리뷰 작성 폼을 제출하기
+    function submitReview() {
+      const title = document.getElementById('book-title').value.trim(); // 제목 입력값 가져오기
+      const rating = document.getElementById('rating').value.trim(); // 평점 입력값 가져오기
+      const content = document.getElementById('review-content').value.trim(); // 내용 입력값 가져오기
+
+      // 모든 필드가 입력되었는지 확인
+      if (!title || !rating || !content) {
+        alert('모든 필드를 입력해주세요.');
+        return;
+      }
+
+      // 새 리뷰 객체를 만들기
+      const newReview = {
+        title: title,
+        rating: rating,
+        content: content
+      };
+
+      // 새 리뷰를 리뷰 목록의 맨 앞에 추가합니다. (바로 맨 앞)
+      reviews.unshift(newReview);
+
+      // 리뷰 목록을 업데이트하기
+      displayReviews();
+
+      // 폼을 초기화시키기
+      document.getElementById('book-title').value = '';
+      document.getElementById('rating').value = '';
+      document.getElementById('review-content').value = '';
+
+      // 리뷰 작성 완료 알림을 표시 후 목록이 뜨게 하기
+      alert('리뷰가 성공적으로 작성되었습니다.');
+    }
+
+    // 모달에서 책 제목을 가져와서 리뷰 작성 폼에 자동 완성 ㅇㅇ
+    function openReviewForm() {
+      const bookTitle = document.getElementById('book-title-detail').textContent; // 모달에서 책 제목 가져오기
+      document.getElementById('book-title').value = bookTitle; // 제목 필드에 책 제목 설정
+      document.getElementById('book-details-modal').style.display = 'none'; // 모달을 닫습니다.
+    }
+
+    // 모달을 닫기
+    function closeModal() {
+      document.getElementById('book-details-modal').style.display = 'none'; 
+    }
+  </script>
+</body>
+</html>
