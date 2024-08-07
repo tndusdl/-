@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>책 리뷰 사이트</title>
-  <!-- Font Awesome CSS 링크 -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <style>
     body {
@@ -100,6 +99,7 @@
       padding: 15px;
       margin-bottom: 15px;
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      position: relative;
     }
     .review h3 {
       margin-top: 0;
@@ -107,6 +107,22 @@
     .star-rating {
       color: #FFD700;
       font-size: 1.2em;
+    }
+    .review-buttons {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+    }
+    .review-buttons button {
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      padding: 5px 10px;
+      cursor: pointer;
+      margin-left: 5px;
+    }
+    .review-buttons button.delete {
+      background-color: #ff0000;
     }
     /* 책 상세정보 */
     .book-details {
@@ -251,192 +267,212 @@
   </div>
 
   <script>
-    // 로컬 스토리지에서 리뷰 불러와야 됨 없으면 빈 배열 사용하기 (수정)
+    // 로컬 스토리지에서 리뷰 불러와야 됨 없으면 빈 배열 사용하기 (수정완료)
     let reviews = JSON.parse(localStorage.getItem('reviews')) || [];
-    let currentPage = 1; //1로 포기값 설정
-    const reviewsPerPage = 5; //페이지 리뷰 수 5로 설정
+    let currentPage = 1;
+    const reviewsPerPage = 5;
+    let editIndex = -1; // 수정 중인 리뷰의 인덱스
 
-    // 별점 클릭 및 리뷰 목록 갱신하기
+    // 검색 결과 책 정보를 저장하는 변수
+    let books = [];
+
     document.addEventListener('DOMContentLoaded', () => {
-      document.querySelectorAll('.fa-star').forEach(star => { //별점 아이콘으로 추가하기!!!
-        star.addEventListener('click', setRating); 
-      });
-      updateReviews();
+      displayReviews();
     });
 
-    // 책 검색
-    function searchBooks() {
-      const query = document.getElementById('search-input').value; //검색창에 책 검색하면
-      const url = `https://www.googleapis.com/books/v1/volumes?q=${query}`; //구글북api 불러오기 ㅇㅇ
-
-     //api 호출해서 데이터 가져오는 함수임 
-      fetch(url)
-        .then(response => response.json()) 
-        .then(data => {
-          const booksList = document.getElementById('books-list'); //책 목록에 표시할 요소 선택
-          booksList.innerHTML = ''; //책 목록 초기화
-
-          data.items.forEach(item => {
-            const bookCard = document.createElement('div');
-            bookCard.classList.add('book-card');
-            bookCard.innerHTML = `
-              <img src="${item.volumeInfo.imageLinks?.thumbnail || 'placeholder.jpg'}" alt="${item.volumeInfo.title}" onclick="showBookDetails('${item.id}')">
-              <h3>${item.volumeInfo.title}</h3>
-              <p>${item.volumeInfo.authors ? item.volumeInfo.authors.join(', ') : '저자 정보 없음'}</p>
-            `;
-            booksList.appendChild(bookCard);
-          });
-        });
+    // 리뷰를 로컬 스토리지에 저장
+    function saveReviews() {
+      localStorage.setItem('reviews', JSON.stringify(reviews));
     }
 
-    // 검색 결과의 책 상세정보 표시 
-    function showBookDetails(bookId) {
-      const url = `https://www.googleapis.com/books/v1/volumes/${bookId}`;
+    // 별점 클릭 시 별점 업데이트 
+    document.querySelectorAll('.star-rating .fa').forEach(star => {
+      star.addEventListener('click', function() {
+        const rating = this.getAttribute('data-rating');
+        document.getElementById('rating').value = rating;
+        document.querySelectorAll('.star-rating .fa').forEach(star => {
+          star.style.color = star.getAttribute('data-rating') <= rating ? '#FFD700' : '#ccc';
+        });
+      });
+    });
+
+    // 리뷰 작성 
+    function submitReview() {
+      const bookTitle = document.getElementById('book-title').value;
+      const rating = document.getElementById('rating').value;
+      const content = document.getElementById('review-content').value;
+
+      if (!bookTitle || !rating || !content) {
+        alert('모든 필드를 채워주세요!');
+        return;
+      }
+
+      const review = {
+        bookTitle,
+        rating: parseInt(rating),
+        content,
+        date: new Date().toISOString()
+      };
+
+      if (editIndex === -1) {
+        reviews.push(review);
+      } else {
+        reviews[editIndex] = review;
+        editIndex = -1;
+      }
       
-      //api 호출해서 데이터 가져오기 
-      fetch(url)
+      saveReviews();
+      displayReviews();
+      clearForm();
+    }
+
+    // 리뷰 수정 
+    function editReview(index) {
+      const review = reviews[index];
+      document.getElementById('book-title').value = review.bookTitle;
+      document.getElementById('rating').value = review.rating;
+      document.getElementById('review-content').value = review.content;
+      document.querySelectorAll('.star-rating .fa').forEach(star => {
+        star.style.color = star.getAttribute('data-rating') <= review.rating ? '#FFD700' : '#ccc';
+      });
+      editIndex = index;
+      window.scrollTo(0, 0); // 폼으로 스크롤 이동
+    }
+
+    // 리뷰 삭제 
+    function deleteReview(index) {
+      if (confirm('이 리뷰를 삭제하시겠습니까?')) {
+        reviews.splice(index, 1);
+        saveReviews();
+        displayReviews();
+      }
+    }
+
+    // 폼 필드 초기화 
+    function clearForm() {
+      document.getElementById('book-title').value = '';
+      document.getElementById('rating').value = '';
+      document.getElementById('review-content').value = '';
+      document.querySelectorAll('.star-rating .fa').forEach(star => {
+        star.style.color = '#ccc';
+      });
+    }
+
+    // 페이지 번호 업데이트 
+    function updatePageNumber() {
+      document.getElementById('page-number').textContent = `페이지 ${currentPage}`;
+    }
+
+    // 리뷰 목록 표시 함수 
+    function displayReviews() {
+      const reviewsList = document.getElementById('reviews-list');
+      reviewsList.innerHTML = '';
+
+      const start = (currentPage - 1) * reviewsPerPage;
+      const end = start + reviewsPerPage;
+      const currentReviews = reviews.slice(start, end);
+
+      currentReviews.forEach((review, index) => {
+        const reviewElement = document.createElement('div');
+        reviewElement.classList.add('review');
+        reviewElement.innerHTML = `
+          <h3>${review.bookTitle}</h3>
+          <div class="star-rating">${generateStars(review.rating)}</div>
+          <p>${review.content}</p>
+          <small>${new Date(review.date).toLocaleDateString()}</small>
+          <div class="review-buttons">
+            <button onclick="editReview(${start + index})">수정</button>
+            <button class="delete" onclick="deleteReview(${start + index})">삭제</button>
+          </div>
+        `;
+        reviewsList.appendChild(reviewElement);
+      });
+
+      updatePageNumber();
+    }
+
+    // 별점 생성 
+    function generateStars(rating) {
+      let stars = '';
+      for (let i = 1; i <= 5; i++) {
+        stars += `<i class="fa fa-star" style="color: ${i <= rating ? '#FFD700' : '#ccc'}"></i>`;
+      }
+      return stars;
+    }
+
+    // 이전 페이지
+    function prevPage() {
+      if (currentPage > 1) {
+        currentPage--;
+        displayReviews();
+      }
+    }
+
+    // 다음 페이지 
+    function nextPage() {
+      if (currentPage * reviewsPerPage < reviews.length) {
+        currentPage++;
+        displayReviews();
+      }
+    }
+
+    // Open Library API를 사용하여 책 검색
+    function searchBooks() {
+      const query = document.getElementById('search-input').value;
+      if (!query) {
+        alert('검색어를 입력해주세요!');
+        return;
+      }
+
+      fetch(`https://openlibrary.org/search.json?q=${query}`)
         .then(response => response.json())
         .then(data => {
-          // 책 상세 정보 요소에 데이터 설정
-          document.getElementById('book-title-detail').innerText = data.volumeInfo.title;
-          document.getElementById('book-author').innerText = data.volumeInfo.authors ? data.volumeInfo.authors.join(', ') : '저자 정보 없음';
-          document.getElementById('book-publisher').innerText = data.volumeInfo.publisher || '출판사 정보 없음';
-          document.getElementById('book-published-date').innerText = data.volumeInfo.publishedDate || '출판일 정보 없음';
-          document.getElementById('book-description').innerText = data.volumeInfo.description || '설명 없음';
-        
-          //책 카드 클릭시 상세 정보 모달 표시하기
-          document.getElementById('book-details-modal').style.display = 'flex'; 
-        });
+          books = data.docs;
+          displayBooks();
+        })
+        .catch(error => console.error('Error fetching books:', error));
     }
 
-    // 모달 닫기,, 숨기기
+    // 책 목록 표시 함수 
+    function displayBooks() {
+      const booksList = document.getElementById('books-list');
+      booksList.innerHTML = '';
+
+      books.forEach(book => {
+        const bookCard = document.createElement('div');
+        bookCard.classList.add('book-card');
+        bookCard.innerHTML = `
+          <img src="https://covers.openlibrary.org/b/id/${book.cover_i}-L.jpg" alt="${book.title}" onclick="showBookDetails('${book.key}')">
+          <h3>${book.title}</h3>
+          <p>${book.author_name ? book.author_name.join(', ') : '저자 정보 없음'}</p>
+        `;
+        booksList.appendChild(bookCard);
+      });
+    }
+
+    // 책 상세 정보 표시 함수 
+    function showBookDetails(key) {
+      const book = books.find(book => book.key === key);
+      if (book) {
+        document.getElementById('book-title-detail').textContent = book.title;
+        document.getElementById('book-author').textContent = book.author_name ? book.author_name.join(', ') : '저자 정보 없음';
+        document.getElementById('book-publisher').textContent = book.publisher ? book.publisher.join(', ') : '출판사 정보 없음';
+        document.getElementById('book-published-date').textContent = book.first_publish_year || '출판일 정보 없음';
+        document.getElementById('book-description').textContent = book.subject ? book.subject.join(', ') : '설명 없음';
+
+        document.getElementById('book-details-modal').style.display = 'flex';
+      }
+    }
+
+    // 모달 창 닫기 함수 
     function closeModal() {
       document.getElementById('book-details-modal').style.display = 'none';
     }
 
-    // 별점 설정 함수
-    function setRating(event) {
-      // 클릭한 별의 데이터에서 평점 가져오기
-      const rating = event.target.getAttribute('data-rating');
-      //숨겨진 평점 입력 필드에 값 설정하기
-      document.getElementById('rating').value = rating;
-      //모든 별을 다시 칠하기
-      document.querySelectorAll('.fa-star').forEach(star => {
-      //클릭한 별들은 색이 칠해짐 ㅇㅇ 
-        star.style.color = star.getAttribute('data-rating') <= rating ? '#FFD700' : '#ddd';
-      });
-    }
-
-    // 리뷰 제출 함수 -> 책 제목, 평점, 내용
-function submitReview() {
-  const title = document.getElementById('book-title').value;
-  const rating = document.getElementById('rating').value;
-  const content = document.getElementById('review-content').value;
-
-  if (title && rating && content) { //모두 작성이 되었는지 확인
-    reviews.unshift({ title, rating, content }); // 새로운 리뷰를 배열 맨 앞에 추가
-    localStorage.setItem('reviews', JSON.stringify(reviews)); // 그 로컬 스토리지에 리뷰 목록 저장하는 거
-    updateReviews(); // 업데이트하는 고임 리뷰 목록에
-    // 입력 필드 초기화
-    document.getElementById('book-title').value = '';
-    document.getElementById('rating').value = '';
-    document.getElementById('review-content').value = '';
-    // 별색 초기화
-    document.querySelectorAll('.fa-star').forEach(star => star.style.color = '#ddd');
-  } else {
-    alert('빈칸없이작성해주세요.');
-  }
-}
-
-    // 리뷰 목록 갱신 함수
-    function updateReviews() {
-      const reviewsList = document.getElementById('reviews-list'); //리뷰 목록 표시할 요소 선택
-      reviewsList.innerHTML = ''; //기존 리뷰 목록 초기화하기
-
-     // 이거 현재 페이지에 표시할 리뷰의 시작과 끝 인덱스 계산하는 거림
-      const start = (currentPage - 1) * reviewsPerPage;
-      const end = start + reviewsPerPage;
-      //현재 페이지에 표시할 리뷰 목록 잘라내기
-      const currentReviews = reviews.slice(start, end);
-
-     //각 리뷰에 대해 html 요소 생성 및 추가
-      currentReviews.forEach((review, index) => {
-        const reviewDiv = document.createElement('div');
-        reviewDiv.classList.add('review');
-        reviewDiv.innerHTML = `
-          <h3>${review.title}</h3>
-          <div class="star-rating">${'★'.repeat(review.rating)}${'☆'.repeat(5 - review.rating)}</div>
-          <p>${review.content}</p>
-          <button onclick="editReview(${start + index})">수정</button>
-          <button onclick="deleteReview(${start + index})">삭제</button>
-        `;
-        reviewsList.insertBefore(reviewDiv, reviewsList.firstChild); 
-      });
-
-      //페이징 기능 추가 -> 현재 페이지 번호 업데이트 하는 거 ㅇㅇㅍ
-      document.getElementById('page-number').innerText = `${currentPage} / ${Math.ceil(reviews.length / reviewsPerPage)}`;
-    }
-
-    // 이전 페이지 함수
-    function prevPage() {
-      // 현재 페이지가 1보다 큰 경우 이전 페이지로 이동하고
-      if (currentPage > 1) {
-        currentPage--;
-        updateReviews();//리뷰목록업데이트
-      }
-    }
-
-    // 다음 페이지 함수
-    function nextPage() {
-      //현재 페이지가 마지막 페이지보다 작은 경우 다음 페이지로 이동하고
-      if (currentPage < Math.ceil(reviews.length / reviewsPerPage)) {
-        currentPage++;
-        updateReviews(); //리뷰목록업데이트
-      }
-    }
-
-    // 리뷰 수정 함수 (추가)
-    function editReview(index) {
-      //수정할 리뷰 선택
-      const review = reviews[index];
-      //입력 필드에 다 작성 ㅇㅇ 채우기
-      document.getElementById('book-title').value = review.title;
-      document.getElementById('rating').value = review.rating;
-      document.getElementById('review-content').value = review.content;
-
-      //별점 색상 업데이트
-      document.querySelectorAll('.fa-star').forEach(star => {
-        star.style.color = star.getAttribute('data-rating') <= review.rating ? '#FFD700' : '#ddd';
-      });
-
-      // 선택한 리뷰 목록에서 제거
-      reviews.splice(index, 1);
-      //로컬 스토리지에 업데이트 된 리뷰 목록 저장
-      localStorage.setItem('reviews', JSON.stringify(reviews));
-      //리뷰 목록 업데이트
-      updateReviews();
-    }
-
-    // 리뷰 삭제하기
-    function deleteReview(index) {
-      if (confirm('리뷰를 삭제하시겠습니까?')) {
-        reviews.splice(index, 1); //선택한 리뷰 삭제하고
-        localStorage.setItem('reviews', JSON.stringify(reviews)); //업데이트된 리뷰 목록 저장하고
-        updateReviews(); //업데이트 ㅇㅇ
-      }
-    }
-
-    // 리뷰 작성 폼 열기 
+    // 리뷰 작성 폼 열기 함수 
     function openReviewForm() {
-      //책 상세정보 모달 숨기는 거임
-      document.getElementById('book-details-modal').style.display = 'none'; 
-      //검색 창에 책 제목 설정
-      document.getElementById('book-title').value = document.getElementById('book-title-detail').innerText;
-     //평점이랑 내용 입력 초기화
-      document.getElementById('rating').value = '';
-      document.getElementById('review-content').value = '';
-      //별점 색상 초기화
-      document.querySelectorAll('.fa-star').forEach(star => star.style.color = '#ddd');
+      closeModal();
+      document.getElementById('book-title').value = document.getElementById('book-title-detail').textContent;
     }
   </script>
 </body>
